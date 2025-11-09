@@ -1,43 +1,61 @@
 import {MiddlewareConfig, NextRequest, NextResponse} from "next/server";
+import {jwtDecode} from "jwt-decode";
 
 const publicRoutes = [
-    { path: "/sign-in", whenAuthenticated: "redirect" },
-    { path: "/forgot-password", whenAuthenticated: "redirect" },
-    { path: "/register", whenAuthenticated: "redirect" },
-    { path: "/pricing", whenAuthenticated: "next" },
+    {path: "/sign-in", whenAuthenticated: "redirect"},
+    {path: "/forgot-password", whenAuthenticated: "redirect"},
+    {path: "/register", whenAuthenticated: "redirect"},
+    {path: "/pricing", whenAuthenticated: "next"},
+    {path: "/", whenAuthenticated: "next"},
 ] as const
 
-const REDIRECT_WEN_NOT_AUTHENTICATED_ROUTES = "/sign-in"
+const REDIRECT_WHEN_NOT_AUTHENTICATED_ROUTES = "/sign-in"
 
 export function proxy(request: NextRequest) {
 
     const path = request.nextUrl.pathname
     const publicRoute = publicRoutes.find((r) => r.path === path)
-    const authToken = request.cookies.get("thera-token")
+    const token = request.cookies.get("thera-token")
 
-    if (!authToken && publicRoute) {
+    if (!token && publicRoute) {
         return NextResponse.next()
     }
 
-    if (!authToken && !publicRoute) {
+    if (!token && !publicRoute) {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = REDIRECT_WEN_NOT_AUTHENTICATED_ROUTES
+        redirectUrl.pathname = REDIRECT_WHEN_NOT_AUTHENTICATED_ROUTES
         return NextResponse.redirect(redirectUrl)
     }
 
-    if (authToken && publicRoute && publicRoute.whenAuthenticated === "redirect") {
+    if (token && publicRoute && publicRoute.whenAuthenticated === "redirect") {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = "/"
+        redirectUrl.pathname = "/dashboard"
         return NextResponse.redirect(redirectUrl)
     }
 
-    if (authToken && !publicRoute) {
-        // Checar se o JWT está expirado
-        // Se sim, remover o cookie e redirecionar o usuário pro login
-        return NextResponse.next()
+    if (token && !publicRoute) {
+        try {
+            const decoded = jwtDecode(token.value);
+
+            if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+                const redirectUrl = request.nextUrl.clone();
+                redirectUrl.pathname = REDIRECT_WHEN_NOT_AUTHENTICATED_ROUTES
+                const res = NextResponse.redirect(redirectUrl);
+                res.cookies.delete("thera-token");
+                return res;
+            }
+
+            return NextResponse.next();
+        } catch (_) {
+            const redirectUrl = request.nextUrl.clone();
+            redirectUrl.pathname = REDIRECT_WHEN_NOT_AUTHENTICATED_ROUTES
+            const res = NextResponse.redirect(redirectUrl);
+            res.cookies.delete("thera-token");
+            return res;
+        }
     }
 
-    return NextResponse.next()
+    return NextResponse.next();
 }
 
 export const config: MiddlewareConfig = {
