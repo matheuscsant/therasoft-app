@@ -5,6 +5,7 @@ Allow: /register
 Allow: /forgot-password
 Allow: /pricing
 
+Disallow: /profile
 Disallow: /dashboard
 Disallow: /api/
 Disallow: /_next/
