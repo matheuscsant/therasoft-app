@@ -57,7 +57,7 @@ export function useAuth() {
 
             const response = await authService.login(token);
             setCookie("thera-token", response.token);
-            router.push("/profile");
+            router.push("/dashboard");
         } catch (err) {
             const msg = handleError(err);
             setError(msg);
