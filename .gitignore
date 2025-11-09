@@ -42,3 +42,6 @@ next-env.d.ts
 
 # intellij
 .idea
+
+# firebase
+/src/lib/firebase.ts
